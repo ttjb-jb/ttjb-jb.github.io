@@ -299,8 +299,13 @@ function App(){
   }
 
   function openFixR32(){
-    // Initialise draft from current r32 matchups
-    const draft=(knockout?.r32||[]).map(m=>({home:m.home,away:m.away,homeScore:m.homeScore,awayScore:m.awayScore,winner:m.winner}));
+    // Always 16 R32 matches for a 48-team World Cup format
+    // Pre-fill from existing bracket where we have it, blank for missing slots
+    const existing=knockout?.r32||[];
+    const draft=Array(16).fill(null).map((_,i)=>{
+      const m=existing[i];
+      return{home:m?.home||"",away:m?.away||"",homeScore:m?.homeScore||"",awayScore:m?.awayScore||"",winner:m?.winner||null};
+    });
     setR32Draft(draft);
     setFixingR32(true);
   }
@@ -318,15 +323,8 @@ function App(){
         winner:teamsUnchanged?old.winner:null,
       };
     });
-    // Propagate R32 winners that are already confirmed into R16 slots positionally
-    const newR16=Array(16).fill(null).map((_,i)=>{
-      const matchIdx=Math.floor(i/2)*2; // pairs: 0,1 → slot 0; 2,3 → slot 1 etc.
-      const pairSlot=i%2; // 0=home winner, 1=away winner
-      const r32Match=newR32[i];
-      const team=r32Match?.winner||"TBD";
-      return{home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null};
-    });
-    // Properly seed R16: winner of R32 match i goes into R16 match floor(i/2), slot i%2
+    // Build fresh R16 (8 matches), seeding in any already-confirmed R32 winners
+    const newR16=Array(8).fill(null).map(()=>({home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null}));
     newR32.forEach((m,i)=>{
       if(m.winner){
         const r16idx=Math.floor(i/2);
@@ -337,10 +335,9 @@ function App(){
     const next={
       ...knockout,
       r32:newR32,
-      // Reset R16 onwards with correct seeding, clear anything beyond
       r16:newR16,
-      qf:Array(8).fill(null).map(()=>({home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null})),
-      sf:Array(4).fill(null).map(()=>({home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null})),
+      qf:Array(4).fill(null).map(()=>({home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null})),
+      sf:Array(2).fill(null).map(()=>({home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null})),
       final:[{home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null}],
       champion:null,
     };
