@@ -306,7 +306,7 @@ function App(){
   }
 
   function confirmFixR32(){
-    // Rebuild r32 with new pairings; reset scores only where teams changed
+    // Rebuild r32 with new pairings; preserve scores only where teams unchanged
     const oldR32=knockout?.r32||[];
     const newR32=r32Draft.map((match,i)=>{
       const old=oldR32[i]||{};
@@ -318,7 +318,32 @@ function App(){
         winner:teamsUnchanged?old.winner:null,
       };
     });
-    const next={...knockout,r32:newR32};
+    // Propagate R32 winners that are already confirmed into R16 slots positionally
+    const newR16=Array(16).fill(null).map((_,i)=>{
+      const matchIdx=Math.floor(i/2)*2; // pairs: 0,1 → slot 0; 2,3 → slot 1 etc.
+      const pairSlot=i%2; // 0=home winner, 1=away winner
+      const r32Match=newR32[i];
+      const team=r32Match?.winner||"TBD";
+      return{home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null};
+    });
+    // Properly seed R16: winner of R32 match i goes into R16 match floor(i/2), slot i%2
+    newR32.forEach((m,i)=>{
+      if(m.winner){
+        const r16idx=Math.floor(i/2);
+        const slot=i%2===0?"home":"away";
+        newR16[r16idx][slot]=m.winner;
+      }
+    });
+    const next={
+      ...knockout,
+      r32:newR32,
+      // Reset R16 onwards with correct seeding, clear anything beyond
+      r16:newR16,
+      qf:Array(8).fill(null).map(()=>({home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null})),
+      sf:Array(4).fill(null).map(()=>({home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null})),
+      final:[{home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null}],
+      champion:null,
+    };
     setKnockout(next);save({knockout:next});
     setFixingR32(false);
     setTab("Knockout");
@@ -536,8 +561,22 @@ function App(){
                 </div>
               )}
               {fixingR32&&(()=>{
-                // All teams currently in the r32
-                const r32Teams=[...new Set((knockout.r32||[]).flatMap(m=>[m.home,m.away]).filter(t=>t&&t!=="TBD"))];
+                // Get all qualified teams from group standings (top 2 per group + best 3rd placed)
+                // This ensures Japan, Paraguay, Ghana etc. are available even if the old bracket missed them
+                const allQualified=[];
+                const groupKeys=Object.keys(groups).sort();
+                const firsts=[],seconds=[],thirds=[];
+                groupKeys.forEach(g=>{
+                  const rows=standings[g]||[];
+                  if(rows[0])firsts.push(rows[0].team);
+                  if(rows[1])seconds.push(rows[1].team);
+                  if(rows[2])thirds.push({...rows[2],group:g});
+                });
+                allQualified.push(...firsts,...seconds);
+                // Best 8 third-placed to fill to 32
+                thirds.sort((a,b)=>b.pts-a.pts||(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf);
+                thirds.slice(0,32-allQualified.length).forEach(t=>allQualified.push(t.team));
+                const r32Teams=[...new Set(allQualified)];
                 const used=new Set(r32Draft.flatMap(m=>[m.home,m.away]).filter(Boolean));
                 return(
                   <div style={{background:"#0f1628",border:"1px solid #1e2a4a",borderRadius:10,padding:16,marginBottom:20}}>
