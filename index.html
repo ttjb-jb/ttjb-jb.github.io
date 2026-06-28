@@ -164,6 +164,8 @@ function App(){
   const[knockout,setKnockout]=useState(null);
   const[editingGroups,setEditingGroups]=useState(false);
   const[groupDraft,setGroupDraft]=useState("");
+  const[fixingR32,setFixingR32]=useState(false);
+  const[r32Draft,setR32Draft]=useState([]);
   const[scoring,setScoring]=useState(DEFAULT_SCORING);
   const[editingScoring,setEditingScoring]=useState(false);
   const[fbStatus,setFbStatus]=useState("connecting");
@@ -294,6 +296,36 @@ function App(){
       sf:Array(4).fill(null).map(()=>({home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null})),
       final:[{home:"TBD",away:"TBD",homeScore:"",awayScore:"",winner:null}],champion:null};
     setKnockout(ko);save({knockout:ko});setTab("Knockout");
+  }
+
+  function openFixR32(){
+    // Initialise draft from current r32 matchups
+    const draft=(knockout?.r32||[]).map(m=>({home:m.home,away:m.away,homeScore:m.homeScore,awayScore:m.awayScore,winner:m.winner}));
+    setR32Draft(draft);
+    setFixingR32(true);
+  }
+
+  function confirmFixR32(){
+    // Rebuild r32 with new pairings; reset scores only where teams changed
+    const oldR32=knockout?.r32||[];
+    const newR32=r32Draft.map((match,i)=>{
+      const old=oldR32[i]||{};
+      const teamsUnchanged=old.home===match.home&&old.away===match.away;
+      return{
+        home:match.home,away:match.away,
+        homeScore:teamsUnchanged?old.homeScore:"",
+        awayScore:teamsUnchanged?old.awayScore:"",
+        winner:teamsUnchanged?old.winner:null,
+      };
+    });
+    const next={...knockout,r32:newR32};
+    setKnockout(next);save({knockout:next});
+    setFixingR32(false);
+    setTab("Knockout");
+  }
+
+  function updateR32Draft(i,slot,val){
+    setR32Draft(prev=>prev.map((m,mi)=>mi===i?{...m,[slot]:val}:m));
   }
 
   function updateKO(round,idx,field,val){
@@ -494,6 +526,51 @@ function App(){
               <button onClick={buildKnockout} style={B("#2563eb","#fff")}>Build Bracket</button>
             </div>
             :<div>
+              {/* Fix R32 Draw button — for correcting incorrect auto-generated matchups */}
+              {!fixingR32&&(
+                <div style={{marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                  <button onClick={openFixR32} style={{...B("#1e2a4a","#94a3b8"),fontSize:12,padding:"6px 12px"}}>
+                    🔄 Fix R32 Draw
+                  </button>
+                  <span style={{fontSize:11,color:"#475569",fontFamily:"monospace"}}>Use this to correct the bracket to match the real tournament draw</span>
+                </div>
+              )}
+              {fixingR32&&(()=>{
+                // All teams currently in the r32
+                const r32Teams=[...new Set((knockout.r32||[]).flatMap(m=>[m.home,m.away]).filter(t=>t&&t!=="TBD"))];
+                const used=new Set(r32Draft.flatMap(m=>[m.home,m.away]).filter(Boolean));
+                return(
+                  <div style={{background:"#0f1628",border:"1px solid #1e2a4a",borderRadius:10,padding:16,marginBottom:20}}>
+                    <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"#f1f5f9"}}>🔄 Fix R32 Matchups</div>
+                    <div style={{fontSize:11,color:"#64748b",fontFamily:"monospace",marginBottom:14,lineHeight:1.5}}>
+                      Re-enter who plays who to match the real draw. Scores are preserved where teams are unchanged.
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"50vh",overflowY:"auto"}}>
+                      {r32Draft.map((m,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#1a1f3a",borderRadius:6,padding:"8px 10px"}}>
+                          <span style={{fontSize:11,color:"#475569",fontFamily:"monospace",width:20}}>{i+1}.</span>
+                          <select value={m.home} onChange={e=>updateR32Draft(i,"home",e.target.value)} style={{flex:1,background:m.home?"#f59e0b":"#1e2a4a",color:m.home?"#0f172a":"#94a3b8",border:"1px solid #1e2a4a",borderRadius:5,padding:"5px 7px",fontSize:11,fontWeight:700}}>
+                            <option value="">— Home —</option>
+                            {r32Teams.filter(t=>!used.has(t)||t===m.home).map(t=><option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <span style={{fontSize:10,color:"#475569",fontFamily:"monospace"}}>vs</span>
+                          <select value={m.away} onChange={e=>updateR32Draft(i,"away",e.target.value)} style={{flex:1,background:m.away?"#f59e0b":"#1e2a4a",color:m.away?"#0f172a":"#94a3b8",border:"1px solid #1e2a4a",borderRadius:5,padding:"5px 7px",fontSize:11,fontWeight:700}}>
+                            <option value="">— Away —</option>
+                            {r32Teams.filter(t=>!used.has(t)||t===m.away).map(t=><option key={t} value={t}>{t}</option>)}
+                          </select>
+                          {(m.homeScore||m.awayScore)&&<span style={{fontSize:10,color:"#22c55e",fontFamily:"monospace"}}>✓{m.homeScore}-{m.awayScore}</span>}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{display:"flex",gap:10,marginTop:14}}>
+                      <button onClick={()=>setFixingR32(false)} style={B("#1e2a4a","#94a3b8")}>Cancel</button>
+                      <button onClick={confirmFixR32} disabled={r32Draft.some(m=>!m.home||!m.away)} style={{...B("#2563eb","#fff"),opacity:r32Draft.some(m=>!m.home||!m.away)?0.5:1}}>
+                        ✓ Confirm New Draw
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
               {[{key:"r32",label:"Round of 32",cols:4},{key:"r16",label:"Round of 16",cols:4},{key:"qf",label:"Quarter Finals",cols:4},{key:"sf",label:"Semi Finals",cols:2},{key:"final",label:"🏆 Final",cols:1}].map(({key,label,cols})=>(
                 <div key={key} style={{marginBottom:24}}>
                   <div style={SL}>{label}</div>
