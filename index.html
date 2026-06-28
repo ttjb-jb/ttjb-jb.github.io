@@ -610,7 +610,7 @@ function App(){
               {[{key:"r32",label:"Round of 32",cols:4,offset:73},{key:"r16",label:"Round of 16",cols:4,offset:89},{key:"qf",label:"Quarter Finals",cols:4,offset:97},{key:"sf",label:"Semi Finals",cols:2,offset:101},{key:"final",label:"🏆 Final",cols:1,offset:103}].map(({key,label,cols,offset})=>(
                 <div key={key} style={{marginBottom:24}}>
                   <div style={SL}>{label}</div>
-                  <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:10}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
                     {knockout[key].map((m,i)=>{
                       const matchNum=offset+i;
                       const prevRoundOffset={r16:73,qf:89,sf:97,final:101}[key];
