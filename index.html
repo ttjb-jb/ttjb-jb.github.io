@@ -584,7 +584,7 @@ function App(){
                     <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"50vh",overflowY:"auto"}}>
                       {r32Draft.map((m,i)=>(
                         <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#1a1f3a",borderRadius:6,padding:"8px 10px"}}>
-                          <span style={{fontSize:11,color:"#f59e0b",fontFamily:"monospace",width:28,flexShrink:0}}>M{i+1}</span>
+                          <span style={{fontSize:11,color:"#f59e0b",fontFamily:"monospace",width:28,flexShrink:0}}>M{72+i+1}</span>
                           <select value={m.home} onChange={e=>updateR32Draft(i,"home",e.target.value)} style={{flex:1,background:m.home?"#f59e0b":"#1e2a4a",color:m.home?"#0f172a":"#94a3b8",border:"1px solid #1e2a4a",borderRadius:5,padding:"5px 7px",fontSize:11,fontWeight:700}}>
                             <option value="">— Home —</option>
                             {r32Teams.filter(t=>!used.has(t)||t===m.home).map(t=><option key={t} value={t}>{t}</option>)}
@@ -607,13 +607,13 @@ function App(){
                   </div>
                 );
               })()}
-              {[{key:"r32",label:"Round of 32",cols:4,offset:1},{key:"r16",label:"Round of 16",cols:4,offset:17},{key:"qf",label:"Quarter Finals",cols:4,offset:25},{key:"sf",label:"Semi Finals",cols:2,offset:29},{key:"final",label:"🏆 Final",cols:1,offset:31}].map(({key,label,cols,offset})=>(
+              {[{key:"r32",label:"Round of 32",cols:4,offset:73},{key:"r16",label:"Round of 16",cols:4,offset:89},{key:"qf",label:"Quarter Finals",cols:4,offset:97},{key:"sf",label:"Semi Finals",cols:2,offset:101},{key:"final",label:"🏆 Final",cols:1,offset:103}].map(({key,label,cols,offset})=>(
                 <div key={key} style={{marginBottom:24}}>
                   <div style={SL}>{label}</div>
                   <div style={{display:"grid",gridTemplateColumns:`repeat(${cols},1fr)`,gap:10}}>
                     {knockout[key].map((m,i)=>{
                       const matchNum=offset+i;
-                      const prevRoundOffset={r16:1,qf:17,sf:25,final:29}[key];
+                      const prevRoundOffset={r16:73,qf:89,sf:97,final:101}[key];
                       const homeFeeder=prevRoundOffset!=null?`M${prevRoundOffset+(i*2)}`:null;
                       const awayFeeder=prevRoundOffset!=null?`M${prevRoundOffset+(i*2)+1}`:null;
                       return(
